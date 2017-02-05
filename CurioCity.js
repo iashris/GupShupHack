@@ -13,9 +13,9 @@ function MessageHandler(context, event) {
     if(context.simpledb.botleveldata.defined===undefined){
         
         //runs only once
-        context.simpledb.botleveldata.defined==34;
-        context.simpledb.botleveldata.lost={"wallet":[],"keys":[],"document":[],"phone":[],"laptop":[],"bag":[],"jewellery":[],"kid":[],"others":[]};
-         context.simpledb.botleveldata.found={"wallet":[],"keys":[],"document":[],"phone":[],"laptop":[],"bag":[],"jewellery":[],"kid":[],"others":[]};
+        context.simpledb.botleveldata.defined=34;
+        context.simpledb.botleveldata.lost=[];
+         context.simpledb.botleveldata.found=[];
         }
     
     
@@ -50,20 +50,33 @@ if(event.messageobj.refmsgid=="cat_212" && identifier_index===0){
     //response to the lost/found as the category
     var thiscat=event.message.toLowerCase().split(' ')[0];
     context.simpledb.roomleveldata.category=thiscat;
-    context.sendResponse("Please describe the color, shape, material and the location you found the item at in order with your contact details beginning with #.");
+    context.sendResponse("Please enter your phone number");
    // context.sendResponse(questar[0]);
     identifier_index++;
     return;
 }
-
+if(event.message.length==10 && Number(event.message[0])>=7){
+    context.simpledb.roomleveldata.phone=Number(event.message);
+    context.sendResponse("Please describe the color, shape, material and the location you found the item at in order with your contact details beginning with #.");
+    return;
+}
 if(event.message[0]==="#"){
     //first answer
     identifier_index++;
     identifier_answers.push(event.message);
    
-    var itemdata={"identifier_answers":identifier_answers,"sendername":event.senderobj.display,"senderid":event.sender};
-    context.simpledb.botleveldata.lost[context.simpledb.roomleveldata.category].push(itemdata); 
+    var itemdata={"type":context.simpledb.roomleveldata.category,"identifier_answers":identifier_answers,"sendername":event.senderobj.display,"senderid":event.sender,"phone":context.simpledb.roomleveldata.phone};
+    
+    if(context.simpledb.roomleveldata.action=="lost"){
+    context.simpledb.botleveldata.lost[context.simpledb.botleveldata.lost.length]=itemdata; 
      context.sendResponse(context.simpledb.botleveldata.lost);  
+    }
+    else if(context.simpledb.roomleveldata.action=="found"){
+    context.simpledb.botleveldata.found[context.simpledb.botleveldata.found.length]=itemdata; 
+     context.sendResponse(context.simpledb.botleveldata.found);    
+    }
+    
+    //lookformatches();
     return;
     
 }
@@ -76,7 +89,10 @@ if(event.message=="lll"){
 
 
 
-
+function lookformatches(){
+    
+    
+}
 
 
 
@@ -114,7 +130,7 @@ if(event.message=="lll"){
         else{
             context.simpledb.botleveldata.friends=1;
         }
-        context.sendResponse("Abhi "+context.simpledb.botleveldata.friends+" dost aa rahe hain");
+       
     }
     else {
         context.sendResponse('No keyword found : '+event.message); 
