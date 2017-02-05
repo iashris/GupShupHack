@@ -11,6 +11,18 @@ function doesthiscontain(mainthing,parts){
     else return true;
 }
 function MessageHandler(context, event) {
+    
+    if(context.simpledb.botleveldata.defined===undefined){
+        
+        //runs only once
+        context.simpledb.botleveldata.defined==34;
+        context.simpledb.botleveldata={"lost":{"wallet":[],"keys":[],"document":[],"phone":[],"laptop":[],"bag":[],"jewellery":[],"kid":[],"others":[]},
+            "found":{"wallet":[],"keys":[],"document":[],"phone":[],"laptop":[],"bag":[],"jewellery":[],"kid":[],"others":[]}
+        };
+    }
+    
+    
+    
 if(event.message=="hi"){
         
    // context.sendResponse("")
@@ -37,7 +49,8 @@ else{
 
 if(event.messageobj.refmsgid=="cat_212"){
     //response to the lost/found as the category
-    var thiscat=event.message;
+    var thiscat=event.message.toLowerCase();
+    context.simpledb.roomleveldata.category=thiscat;
     questar=QUESTIONS[thiscat];
     context.sendResponse(questar[0]);
     identifier_index++;
@@ -48,6 +61,16 @@ if(identifier_index!==0 && identifier_index<5){
     identifier_answers.push(event.message);
     context.sendRequest(questar[identifier_index]);  
     identifier_index++;
+}
+if(identifier_index==5){
+    context.sendRequest("Please provide your contact number.");
+    identifier_index++;
+}
+
+if(identifier_index==6){
+    //all answers saved, category saved,contact num added
+    var itemdata={"identifier_answers":identifier_answers,"sendername":event.senderobj.display,"senderid":event.sender,"phone":event.message};
+    context.simpledb.botleveldata[context.simpledb.roomleveldata.action][context.simpledb.roomleveldata.category].push(itemdata); 
 }
 
 
@@ -117,7 +140,7 @@ function sendCategories(context){
 	"type": "catalogue",
 	"msgid": "cat_212",
 	"items": [{
-	    "title":"Wallet/Purse",
+	    "title":"Wallet",
 		"imgurl": "http://www.orvis.com/orvis_assets/prodimg/01FJXB.jpg",
 		"options": [{
 			"type": "text",
@@ -131,7 +154,7 @@ function sendCategories(context){
 			"title": "Keys"
 		}]
 	}, {
-	     "title":"Documents/Book",
+	     "title":"Documents",
 		"imgurl": "https://s-media-cache-ak0.pinimg.com/originals/ed/a6/4a/eda64a9f3c041693eed936acc94041da.jpg",
 		"options": [{
 			"type": "text",
