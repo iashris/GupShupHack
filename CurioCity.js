@@ -35,13 +35,14 @@ if(event.message=="hi"){
     context.sendResponse(JSON.stringify(payload));
      return;  
 }
+
 if(event.message=="Lost Something"){
     context.simpledb.roomleveldata.action="lost";
  sendCategories(context);
         return;
  
 }
-else{
+else if(event.message=="Found Something"){
     context.simpledb.roomleveldata.action="found";
      sendCategories(context);
         return;
@@ -125,15 +126,7 @@ function EventHandler(context, event) {
     numinstances = parseInt(context.simpledb.botleveldata.numinstance) + 1;
     context.simpledb.botleveldata.numinstance = numinstances;
     context.sendResponse("Thanks for adding me. You are:" + numinstances);
-    if(event.messageobj.text=='startchattingevent'&& event.messageobj.type=='event'){
-var button = {
-              "type": "survey",
-              "question": "What would you like to do?",
-              "options": ["Eat", "Drink", "Both"],
-              "msgid": "gt_212"
-             }   
-context.sendResponse(JSON.stringify(button));
-}
+  
 }
 function sendCategories(context){
        var catalogue={
