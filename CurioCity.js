@@ -77,6 +77,12 @@ if(event.message[0]==="#"){
     if(context.simpledb.roomleveldata.action=="lost"){
         var itemdata={"type":context.simpledb.roomleveldata.category,"identifier_answers":identifier_answers,"sendername":event.senderobj.display,"senderid":event.sender,"phone":context.simpledb.roomleveldata.phone};
     context.simpledb.botleveldata.lost[context.simpledb.botleveldata.lost.length]=itemdata; 
+    
+
+   // var image = {"type":"image","originalUrl":"image url here","previewUrl":"thumbnail url here"};
+   //  context.sendResponse(JSON.stringify(image));
+
+
      context.sendResponse(context.simpledb.botleveldata.lost);  
     }
     else if(context.simpledb.roomleveldata.action=="found"){
@@ -85,25 +91,69 @@ if(event.message[0]==="#"){
      context.sendResponse(context.simpledb.botleveldata.found);    
     }
     
-    //lookformatches();
+    match=lookformatches(context.simpledb.botleveldata.action,itemdata);
+    if(match!==0)context.sendResponse("Hey! You have been matched with "+match);
     return;
     
 }
 
-if(event.message=="lll"){
-    context.sendResponse(context.simpledb.botleveldata.lost);
+
+
+
+
+
+function lookformatches(act, query){
+	var max_score = 0
+	var idx
+	var cat = query["type"]
+	if (act == "lost") {
+		// now search in found db
+		for (var i = context.simpledb.botleveldata.found.length - 1; i >= 0; i--) {
+			if (cat == context.simpledb.botleveldata.found[i]["type"]){
+				sc = similarity(query["identifier_answers"],context.simpledb.botleveldata.found[i]["identifier_answers"])
+				if (sc > max_score){
+					max_score = sc
+					idx = context.simpledb.botleveldata.found[i]["sendername"]
+				}
+			}
+		}
+	}
+
+	else{
+		// now search in lost db
+		for (var i = context.simpledb.botleveldata.lost.length - 1; i >= 0; i--) {
+			if (cat == context.simpledb.botleveldata.lost[i]["type"]){
+				sc = similarity(query["identifier_answers"],context.simpledb.botleveldata.lost[i]["identifier_answers"])
+				if (sc > max_score){
+					max_score =  sc;
+					idx = context.simpledb.botleveldata.lost[i]["sendername"]
+				}
+			}
+		}
+
+	}
+
+
+	if (max_score > 0.75){
+		return idx
+	
+	return 0
+
+
+}
 }
 
 
 
-
-
-function lookformatches(){
-    
-    
+function similarity(text1, text2){
+    text1 = text1.slice(1,1000);
+    text2 = text2.slice(1,1000);
+    context.console.log(text1,text2);
+	context.simplehttp.makeGet('https://api.dandelion.eu/datatxt/sim/v1/?text1='+text1+'&text2='+text2+'&token=ccb34cf6087e4cbfb5e965bfe7562417');
+	var similarJson = JSON.parse(event.getresp);
+    var score = similarJson.similarity;
+    return score;
 }
-
-
 
 
 
@@ -123,15 +173,7 @@ function lookformatches(){
         context.simpledb.doPut("putby", event.sender);
     }
  
-    else if(z(["pooch","bolo"])){
-           var payload = {
-            "type": "poll",
-            "question": "Do you like ice-cream?",
-            "msgid": "poll_212"
-              };
-    context.sendResponse(JSON.stringify(payload));
-     return;  
-    }
+
     else if(event.message.toLowerCase()=="friend"){
         if(context.simpledb.botleveldata.friends){
             context.simpledb.botleveldata.friends++;
