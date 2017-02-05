@@ -50,9 +50,16 @@ if(event.messageobj.refmsgid=="cat_212" && identifier_index===0){
     //response to the lost/found as the category
     var thiscat=event.message.toLowerCase().split(' ')[0];
     context.simpledb.roomleveldata.category=thiscat;
-    context.sendResponse("Please enter your phone number");
+    if(context.simpledb.roomleveldata.action=="found")
+    context.sendResponse("Please select the image of the item and enter your phone number");
+    else context.sendResponse("Please enter your phone number");
    // context.sendResponse(questar[0]);
     identifier_index++;
+    return;
+}
+if(event.messageobj.type=="image"){
+    context.simpledb.roomleveldata.imgpth=event.messageobj.url;
+    context.sendResponse("Please enter the phone number now");
     return;
 }
 if(event.message.length==10 && Number(event.message[0])>=7){
@@ -65,13 +72,15 @@ if(event.message[0]==="#"){
     identifier_index++;
     identifier_answers.push(event.message);
    
-    var itemdata={"type":context.simpledb.roomleveldata.category,"identifier_answers":identifier_answers,"sendername":event.senderobj.display,"senderid":event.sender,"phone":context.simpledb.roomleveldata.phone};
+    
     
     if(context.simpledb.roomleveldata.action=="lost"){
+        var itemdata={"type":context.simpledb.roomleveldata.category,"identifier_answers":identifier_answers,"sendername":event.senderobj.display,"senderid":event.sender,"phone":context.simpledb.roomleveldata.phone};
     context.simpledb.botleveldata.lost[context.simpledb.botleveldata.lost.length]=itemdata; 
      context.sendResponse(context.simpledb.botleveldata.lost);  
     }
     else if(context.simpledb.roomleveldata.action=="found"){
+        var itemdata={"type":context.simpledb.roomleveldata.category,"identifier_answers":identifier_answers,"sendername":event.senderobj.display,"senderid":event.sender,"phone":context.simpledb.roomleveldata.phone,"imgpth":context.simpledb.roomleveldata.imgpth};
     context.simpledb.botleveldata.found[context.simpledb.botleveldata.found.length]=itemdata; 
      context.sendResponse(context.simpledb.botleveldata.found);    
     }
