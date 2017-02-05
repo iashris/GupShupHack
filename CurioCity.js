@@ -50,21 +50,22 @@ else if(event.message=="Found Something"){
 
 if(event.messageobj.refmsgid=="cat_212"){
     //response to the lost/found as the category
-    var thiscat=event.message.toLowerCase();
+    var thiscat=event.message.toLowerCase().split(' ')[0];
     context.simpledb.roomleveldata.category=thiscat;
     questar=QUESTIONS[thiscat];
     context.sendResponse(questar[0]);
+   // context.sendResponse(questar[0]);
     identifier_index++;
 }
 
-if(identifier_index!==0 && identifier_index<5){
+if(identifier_index!==0 && identifier_index<5 && event.messageobj.refmsgid!=="cat_212" && event.message!==""){
     //first answer
     identifier_answers.push(event.message);
-    context.sendRequest(questar[identifier_index]);  
+    context.sendResponse(questar[identifier_index]);  
     identifier_index++;
 }
 if(identifier_index==5){
-    context.sendRequest("Please provide your contact number.");
+    context.sendResponse("Please provide your contact number.");
     identifier_index++;
 }
 
@@ -133,11 +134,11 @@ function sendCategories(context){
 	"type": "catalogue",
 	"msgid": "cat_212",
 	"items": [{
-	    "title":"Wallet",
+	    "title":"Wallet/Purse",
 		"imgurl": "http://www.orvis.com/orvis_assets/prodimg/01FJXB.jpg",
 		"options": [{
 			"type": "text",
-			"title": "Wallet/Purse"
+			"title": "Wallet"
 		}]
 	}, {
 	    "title":"Keys",
@@ -147,11 +148,11 @@ function sendCategories(context){
 			"title": "Keys"
 		}]
 	}, {
-	     "title":"Documents",
+	     "title":"Documents/Book",
 		"imgurl": "https://s-media-cache-ak0.pinimg.com/originals/ed/a6/4a/eda64a9f3c041693eed936acc94041da.jpg",
 		"options": [{
 			"type": "text",
-			"title": "Documents/Book"
+			"title": "Documents"
 		}]
 	}, {
 	     "title":"Spectacles",
