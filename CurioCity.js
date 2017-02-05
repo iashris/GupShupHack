@@ -1,8 +1,6 @@
 /** This is a sample code for your bot**/
 
-var QUESTIONS={
-    "wallet":["What color was the wallet/purse?","Question2","Question3","Question4"]
-}
+
 var identifier_index=0;
 var identifier_answers=[];
 
@@ -16,10 +14,10 @@ function MessageHandler(context, event) {
         
         //runs only once
         context.simpledb.botleveldata.defined==34;
-        context.simpledb.botleveldata={"lost":{"wallet":[],"keys":[],"document":[],"phone":[],"laptop":[],"bag":[],"jewellery":[],"kid":[],"others":[]},
-            "found":{"wallet":[],"keys":[],"document":[],"phone":[],"laptop":[],"bag":[],"jewellery":[],"kid":[],"others":[]}
-        };
-    }
+        context.simpledb.botleveldata.lost={"wallet":[],"keys":[],"document":[],"phone":[],"laptop":[],"bag":[],"jewellery":[],"kid":[],"others":[]};
+         context.simpledb.botleveldata.found={"wallet":[],"keys":[],"document":[],"phone":[],"laptop":[],"bag":[],"jewellery":[],"kid":[],"others":[]};
+        }
+    
     
     
     
@@ -48,32 +46,34 @@ else if(event.message=="Found Something"){
         return;
 }
 
-if(event.messageobj.refmsgid=="cat_212"){
+if(event.messageobj.refmsgid=="cat_212" && identifier_index===0){
     //response to the lost/found as the category
     var thiscat=event.message.toLowerCase().split(' ')[0];
     context.simpledb.roomleveldata.category=thiscat;
-    questar=QUESTIONS[thiscat];
-    context.sendResponse(questar[0]);
+    context.sendResponse("Please describe the color, shape, material and the location you found the item at in order with your contact details beginning with #.");
    // context.sendResponse(questar[0]);
     identifier_index++;
+    return;
 }
 
-if(identifier_index!==0 && identifier_index<5 && event.messageobj.refmsgid!=="cat_212" && event.message!==""){
+if(event.message[0]==="#"){
     //first answer
+    identifier_index++;
     identifier_answers.push(event.message);
-    context.sendResponse(questar[identifier_index]);  
-    identifier_index++;
-}
-if(identifier_index==5){
-    context.sendResponse("Please provide your contact number.");
-    identifier_index++;
+   
+    var itemdata={"identifier_answers":identifier_answers,"sendername":event.senderobj.display,"senderid":event.sender};
+    context.simpledb.botleveldata.lost[context.simpledb.roomleveldata.category].push(itemdata); 
+     context.sendResponse(context.simpledb.botleveldata.lost);  
+    return;
+    
 }
 
-if(identifier_index==6){
-    //all answers saved, category saved,contact num added
-    var itemdata={"identifier_answers":identifier_answers,"sendername":event.senderobj.display,"senderid":event.sender,"phone":event.message};
-    context.simpledb.botleveldata[context.simpledb.roomleveldata.action][context.simpledb.roomleveldata.category].push(itemdata); 
+if(event.message=="lll"){
+    context.sendResponse(context.simpledb.botleveldata.lost);
 }
+
+
+
 
 
 
