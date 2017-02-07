@@ -40,7 +40,7 @@ function MessageHandler(context, event) {
     else if(source=="itemtype"){
         //answer to third question
         context.simpledb.roomleveldata.itemtype=entity;
-        var usethissentence="Can you tell me something more about this"+entity+"? Say, color, size, material, etc";
+        var usethissentence="Can you tell me something more about this "+entity+"? Say, color, size, material, etc";
         context.simpledb.roomleveldata.source="description";
         //fourth question
         context.sendResponse(usethissentence);
@@ -49,7 +49,7 @@ function MessageHandler(context, event) {
         //answer to fourth question
         context.simpledb.roomleveldata.description=entity;
         var quickreply;
-        if(context.simpledb.roomleveldata.isLost===false){
+        if(context.simpledb.roomleveldata.isLoss===false){
             //ask for a photo
             context.simpledb.roomleveldata.source="photo";
             context.sendResponse("I see. Can you send a pic of the item you've found?");
@@ -75,10 +75,11 @@ function MessageHandler(context, event) {
     }
    
     else if(context.simpledb.roomleveldata.source=="phone"){
+        context.simpledb.roomleveldata.source="invalid";
         context.simpledb.roomleveldata.phone=entity;
         var DATA="not available";
         //compile all the data
-        if(context.simpledb.roomleveldata.isLost){
+        if(context.simpledb.roomleveldata.isLoss){
             DATA={
                 "islost":true,
                 "name":event.senderobj.display,
@@ -168,6 +169,14 @@ function MessageHandler(context, event) {
         var retrieveitem=context.simpledb.roomleveldata.lostmatches[optionchosen];
         context.sendResponse("The owner of the item is "+retrieveitem.name+"\nThey can be reached at "+retireveitem.phone);
     }
+    else if(entity=="sudo destroy all data"){
+        context.simpledb.botleveldata.lostitems=undefined;
+        context.simpledb.botleveldata.founditems=undefined;
+        context.sendResponse("All data destroyed");
+    }
+    else if(entity=="sudo show all data"){
+        context.sendResponse("LOST ITEMS : \n"+JSON.stringify(context.simpledb.botleveldata.lostitems)+"\n\nFOUND ITEMS: \n"+JSON.stringify(context.simpledb.botleveldata.founditems));
+    }
     else {
         context.sendResponse('Sorry! I could not understand you. Type start to report a lost or found issue.'); 
     }
@@ -189,7 +198,7 @@ function LocationHandler(context,event){
        var lat = event.messageobj.latitude;
        var lang = event.messageobj.longitude;
        context.simpledb.roomleveldata.lat=lat;
-       context.simpledb.roomleveldata.lat=lang;
+       context.simpledb.roomleveldata.lang=lang;
        var payload= {
               "type": "quick_reply",
               "content": {
