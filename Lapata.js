@@ -160,12 +160,12 @@ function MessageHandler(context, event) {
       
     }
     else if(source=="found_items_matches"){
-        var optionchosen=entity.split(' ')[1]-1;
+        var optionchosen=entity.split(' ')[1];
         var retrieveitem=context.simpledb.roomleveldata.matches[optionchosen];
         context.sendResponse("The person who has your item is "+retrieveitem.name+"\nThey can be reached at "+retireveitem.phone);
     }
     else if(source=="lost_items_matches"){
-        var optionchosen=entity.split(' ')[1]-1;
+        var optionchosen=entity.split(' ')[1];
         var retrieveitem=context.simpledb.roomleveldata.lostmatches[optionchosen];
         context.sendResponse("The owner of the item is "+retrieveitem.name+"\nThey can be reached at "+retireveitem.phone);
     }
@@ -249,7 +249,7 @@ function calcCrow(lat1, lon1, lat2, lon2)
                   "options":[
                      {
                       "type":"text",
-                      "title":"Select"
+                      "title":"Select "+i
                      }
                    ]
                 }; 
@@ -272,7 +272,7 @@ function calcCrow(lat1, lon1, lat2, lon2)
                   "options":[
                      {
                       "type":"text",
-                      "title":"Select"
+                      "title":"Select "+i
                      }
                    ]
                 }; 
