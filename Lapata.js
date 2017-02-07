@@ -1,10 +1,10 @@
-/** This is a sample code for your bot**/
 function MessageHandler(context, event) {
     //90% conversations begin with hi hii hey hello yo 
     var entity=event.message.toLowerCase();
     var source=event.messageobj!==undefined?event.messageobj.refmsgid:"notapplicable";
     if(entity=="hi" || entity=="hello" || entity=="yo" || entity=="hey" || entity=="start") {
-        var button = {
+        if(context.simpledb.roomleveldata.submitted===undefined){
+                    var button = {
               "type": "survey",
               "question": "Hey! How do I help you?",
               "options": ["I Lost Something", "I Found Something"],
@@ -12,6 +12,38 @@ function MessageHandler(context, event) {
              }   
              //first question
         context.sendResponse(JSON.stringify(button));
+        }
+        else{
+            var button={
+                "type":"poll",
+                "question":"You have a report pending. Do you want to start afresh?",
+                "msgid":"resume001"
+            }
+            context.sendResponse(JSON.stringify(button));
+        }
+        
+
+    }
+    else if(source=="resume001"){
+        if(entity=="yes"){
+            context.simpledb.roomleveldata.submitted=undefined;
+            var button = {
+              "type": "survey",
+              "question": "What do you want to report?",
+              "options": ["I Lost Something", "I Found Something"],
+              "msgid": "start001"
+             }   
+             //first question
+        context.sendResponse(JSON.stringify(button));
+        }
+        else if(entity=="no"){
+            if(context.simpledb.roomleveldata.submitted.islost===true){
+                initiatematchingwithfound(context.simpledb.roomleveldata.submitted);
+            }
+            else{
+                initiatematchingwithlost(context.simpledb.roomleveldata.submitted);
+            }
+        }
     }
     else if(source=="start001") {
         //answer to first question
@@ -91,30 +123,8 @@ function MessageHandler(context, event) {
                 "lat":context.simpledb.roomleveldata.lat,
                 "lang":context.simpledb.roomleveldata.lang
              };
-             if(context.simpledb.botleveldata.lostitems===undefined){
-                 context.simpledb.botleveldata.lostitems=[DATA];
-             }
-             else{
-                 context.simpledb.botleveldata.lostitems.push(DATA);
-             }
-             
-             //now query for items matching this in founditems
-             var found_items_of_same_type_in_proximity=[];
-             if(context.simpledb.botleveldata.founditems===undefined){
-                 context.sendResponse("No found items have been reported yet. If someone submits a found report matching your details, they will be notified to contact you.");
-                 return;
-             }
-             else{
-                 context.simpledb.botleveldata.founditems.forEach(function(v){
-                    //if the two points are in 10km radius and type matches, alert
-                    if(calcCrow(DATA.lat,DATA.lang,v.lat,v.lang)<7){
-                        found_items_of_same_type_in_proximity.push(v);
-                    }
-                 });
-                 context.simpledb.roomleveldata.matches=found_items_of_same_type_in_proximity;
-                 showmatches(found_items_of_same_type_in_proximity,DATA);
-             }
-             
+             context.simpledb.roomleveldata.submitted=DATA;
+             initiatematchingwithfound(DATA);
              
         }
         else{
@@ -130,29 +140,8 @@ function MessageHandler(context, event) {
                 "lat":context.simpledb.roomleveldata.lat,
                 "lang":context.simpledb.roomleveldata.lang
              };
-             if(context.simpledb.botleveldata.founditems===undefined){
-                 context.simpledb.botleveldata.founditems=[DATA];
-             }
-             else{
-                 context.simpledb.botleveldata.founditems.push(DATA);
-             }
-             
-             //match him with the lost pair
-              var lost_items_of_same_type_in_proximity=[];
-             if(context.simpledb.botleveldata.lostitems===undefined){
-                 context.sendResponse("No lost items have been reported yet. If someone submits a lost report matching your details, they will be notified to contact you.");
-                 return;
-             }
-             else{
-                 context.simpledb.botleveldata.lostitems.forEach(function(v){
-                    //if the two points are in 10km radius and type matches, alert
-                    if(calcCrow(DATA.lat,DATA.lang,v.lat,v.lang)<7){
-                        lost_items_of_same_type_in_proximity.push(v);
-                    }
-                 });
-                 context.simpledb.roomleveldata.lostmatches=lost_items_of_same_type_in_proximity;
-                 showlostmatches(lost_items_of_same_type_in_proximity,DATA);
-             }
+             context.simpledb.roomleveldata.submitted=DATA;
+             initiatematchingwithlost(DATA);
              
              
         }
@@ -162,12 +151,42 @@ function MessageHandler(context, event) {
     else if(source=="found_items_matches"){
         var optionchosen=entity.split(' ')[1];
         var retrieveitem=context.simpledb.roomleveldata.matches[optionchosen];
-        context.sendResponse("The person who has your item is "+retrieveitem.name+"\nThey can be reached at "+retrieveitem.phone);
-    }
+        var q={"type":"poll",
+        "question":"The person who has your item is "+retrieveitem.name+"\nThey can be reached at "+retrieveitem.phone+". Please talk to them and let us know if you indeed got your item back. If you say Yes, we will remove your entry from the database.",
+       "msgid":"lastconfirmation"};
+       context.sendResponse(JSON.stringify(q));
+}
     else if(source=="lost_items_matches"){
         var optionchosen=entity.split(' ')[1];
         var retrieveitem=context.simpledb.roomleveldata.lostmatches[optionchosen];
-        context.sendResponse("The owner of the item is "+retrieveitem.name+"\nThey can be reached at "+retrieveitem.phone);
+        var q={"type":"poll",
+        "question":"The owner of the item is "+retrieveitem.name+"\nThey can be reached at "+retrieveitem.phone+". Please talk to them and let us know if you could give the item back. If you say Yes, we will remove your entry from the database.",
+       "msgid":"lastconfirmation"};
+        
+        context.sendResponse(JSON.stringify(q));
+    }
+    else if(source=="lastconfirmation" && entity=="yes"){
+        if(isLoss){
+            context.simpledb.roomleveldata.lostmatches=undefined;
+            var index=context.simpledb.botleveldata.lostitems.indexOf(DATA);
+            context.simpledb.botleveldata.lostitems.splice(index,1);
+            
+            var index2=context.simpledb.botleveldata.founditems.indexOf(retrieveitem);
+            context.simpledb.botleveldata.founditems.splice(index2,1);
+        }
+        else{
+            context.simpledb.roomleveldata.foundmatches=undefined;
+            var index=context.simpledb.botleveldata.founditems.indexOf(DATA);
+            context.simpledb.botleveldata.founditems.splice(index,1);
+            
+            var index2=context.simpledb.botleveldata.lostitems.indexOf(retrieveitem);
+            context.simpledb.botleveldata.lostitems.splice(index2,1);
+        }
+        context.simpledb.roomleveldata.submitted=undefined;
+        context.sendResponse("We are glad we could be of help :)");
+    }
+    else if(source=="lastconfirmation" && entity=="no"){
+        context.sendResponse("Alright then, we shall keep the entry in the database until the problem is solved. Type start to search for a match later.");
     }
     else if(entity=="sudo destroy all data"){
         context.simpledb.botleveldata.lostitems=undefined;
@@ -285,6 +304,59 @@ function calcCrow(lat1, lon1, lat2, lon2)
         }
         context.sendResponse(JSON.stringify(catalogue));
     }
+    function initiatematchingwithfound(DATAX){
+        if(context.simpledb.botleveldata.lostitems===undefined){
+                 context.simpledb.botleveldata.lostitems=[DATAX];
+             }
+             else{
+                 context.simpledb.botleveldata.lostitems.push(DATAX);
+             }
+             
+             //now query for items matching this in founditems
+             var found_items_of_same_type_in_proximity=[];
+             if(context.simpledb.botleveldata.founditems===undefined){
+                 context.sendResponse("No found items have been reported yet. If someone submits a found report matching your details, they will be notified to contact you.");
+                 return;
+             }
+             else{
+                 context.simpledb.botleveldata.founditems.forEach(function(v){
+                    //if the two points are in 10km radius and type matches, alert
+                    if(calcCrow(DATAX.lat,DATAX.lang,v.lat,v.lang)<7){
+                        found_items_of_same_type_in_proximity.push(v);
+                    }
+                 });
+                 context.simpledb.roomleveldata.matches=found_items_of_same_type_in_proximity;
+                 showmatches(found_items_of_same_type_in_proximity,DATAX);
+             }
+             
+    }
+    
+    function initiatematchingwithlost(DATAX){
+        if(context.simpledb.botleveldata.founditems===undefined){
+                 context.simpledb.botleveldata.founditems=[DATAX];
+             }
+             else{
+                 context.simpledb.botleveldata.founditems.push(DATAX);
+             }
+             
+             //match him with the lost pair
+              var lost_items_of_same_type_in_proximity=[];
+             if(context.simpledb.botleveldata.lostitems===undefined){
+                 context.sendResponse("No lost items have been reported yet. If someone submits a lost report matching your details, they will be notified to contact you.");
+                 return;
+             }
+             else{
+                 context.simpledb.botleveldata.lostitems.forEach(function(v){
+                    //if the two points are in 10km radius and type matches, alert
+                    if(calcCrow(DATAX.lat,DATAX.lang,v.lat,v.lang)<7){
+                        lost_items_of_same_type_in_proximity.push(v);
+                    }
+                 });
+                 context.simpledb.roomleveldata.lostmatches=lost_items_of_same_type_in_proximity;
+                 showlostmatches(lost_items_of_same_type_in_proximity,DATAX);
+             }
+    }
+    
 function HttpResponseHandler(context, event) {
 //answer to second question continued
 context.sendResponse(event.getresp);
