@@ -162,12 +162,12 @@ function MessageHandler(context, event) {
     else if(source=="found_items_matches"){
         var optionchosen=entity.split(' ')[1];
         var retrieveitem=context.simpledb.roomleveldata.matches[optionchosen];
-        context.sendResponse("The person who has your item is "+retrieveitem.name+"\nThey can be reached at "+retireveitem.phone);
+        context.sendResponse("The person who has your item is "+retrieveitem.name+"\nThey can be reached at "+retrieveitem.phone);
     }
     else if(source=="lost_items_matches"){
         var optionchosen=entity.split(' ')[1];
         var retrieveitem=context.simpledb.roomleveldata.lostmatches[optionchosen];
-        context.sendResponse("The owner of the item is "+retrieveitem.name+"\nThey can be reached at "+retireveitem.phone);
+        context.sendResponse("The owner of the item is "+retrieveitem.name+"\nThey can be reached at "+retrieveitem.phone);
     }
     else if(entity=="sudo destroy all data"){
         context.simpledb.botleveldata.lostitems=undefined;
