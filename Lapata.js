@@ -91,7 +91,7 @@ function MessageHandler(context, event) {
         else{
             //ask the lost guy if he wants to say something more
             context.simpledb.roomleveldata.source="anythingmore";
-            context.sendResponse("Can you tell something more about the possible location you might have lost the item at?");
+            context.sendResponse("Are you willing to offer a reward in case the item is found? If yes, how much? If not, leave 0.");
         }
     }
     else if(context.simpledb.roomleveldata.source=="anythingmore"){
@@ -174,6 +174,8 @@ function MessageHandler(context, event) {
             
             var index2=context.simpledb.botleveldata.founditems.indexOf(retrieveitem);
             context.simpledb.botleveldata.founditems.splice(index2,1);
+            context.simpledb.roomleveldata.submitted=undefined;
+            context.sendResponse("We are glad we could be of help :) If you found the application useful, you can support us by making a donation at https://www.paypal.me/iashris You are free to make donate any amount as you please. Hope you had a nice experience!");
         }
         else{
             context.simpledb.roomleveldata.foundmatches=undefined;
@@ -182,9 +184,11 @@ function MessageHandler(context, event) {
             
             var index2=context.simpledb.botleveldata.lostitems.indexOf(retrieveitem);
             context.simpledb.botleveldata.lostitems.splice(index2,1);
+            context.simpledb.roomleveldata.submitted=undefined;
+            context.sendResponse("Thanks for being a good samaritan. You shouldn't hesitate to ask for a reward from the person you returned the item to. In most cases, they should acknowledge. :) If you found the application useful, you can support us by making a donation at https://www.paypal.me/iashris You are free to make donate any amount as you please. Hope you had a nice experience!");
         }
-        context.simpledb.roomleveldata.submitted=undefined;
-        context.sendResponse("We are glad we could be of help :)");
+        
+        
     }
     else if(source=="lastconfirmation" && entity=="no"){
         context.sendResponse("Alright then, we shall keep the entry in the database until the problem is solved. Type start to search for a match later.");
@@ -250,7 +254,7 @@ function calcCrow(lat1, lon1, lat2, lon2)
         Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2); 
       var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
       var d = R * c;
-      return d;
+      return d.toFixed(2);
     }
 
     // Converts numeric degrees to radians
@@ -288,7 +292,7 @@ function calcCrow(lat1, lon1, lat2, lon2)
         arr.forEach(function(v,i){
             var dothis={
                   "title": v.itemtype+" "+i,
-                 "subtitle": calcCrow(v.lat,v.lang,src.lat,src.lang)+" km away\n"+v.description+"\nMore details: "+v.moredetails,
+                 "subtitle": calcCrow(v.lat,v.lang,src.lat,src.lang)+" km away\n"+v.description+"\nReward: "+v.moredetails,
                   "options":[
                      {
                       "type":"text",
