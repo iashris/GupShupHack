@@ -1,3 +1,4 @@
+/** This is a sample code for your bot**/
 function MessageHandler(context, event) {
     //90% conversations begin with hi hii hey hello yo 
     var entity=event.message.toLowerCase();
@@ -309,7 +310,7 @@ function calcCrow(lat1, lon1, lat2, lon2)
                  context.simpledb.botleveldata.lostitems=[DATAX];
              }
              else{
-                 context.simpledb.botleveldata.lostitems.push(DATAX);
+                 if(containsObject(DATAX,context.simpledb.botleveldata.lostitems)===false)context.simpledb.botleveldata.lostitems.push(DATAX);
              }
              
              //now query for items matching this in founditems
@@ -322,7 +323,7 @@ function calcCrow(lat1, lon1, lat2, lon2)
                  context.simpledb.botleveldata.founditems.forEach(function(v){
                     //if the two points are in 10km radius and type matches, alert
                     if(calcCrow(DATAX.lat,DATAX.lang,v.lat,v.lang)<7){
-                        found_items_of_same_type_in_proximity.push(v);
+                        if(found_items_of_same_type_in_proximity.indexOf(v)==-1)found_items_of_same_type_in_proximity.push(v);
                     }
                  });
                  context.simpledb.roomleveldata.matches=found_items_of_same_type_in_proximity;
@@ -336,7 +337,7 @@ function calcCrow(lat1, lon1, lat2, lon2)
                  context.simpledb.botleveldata.founditems=[DATAX];
              }
              else{
-                 context.simpledb.botleveldata.founditems.push(DATAX);
+                 if(containsObject(DATAX,context.simpledb.botleveldata.founditems)===false)context.simpledb.botleveldata.founditems.push(DATAX);
              }
              
              //match him with the lost pair
@@ -349,14 +350,24 @@ function calcCrow(lat1, lon1, lat2, lon2)
                  context.simpledb.botleveldata.lostitems.forEach(function(v){
                     //if the two points are in 10km radius and type matches, alert
                     if(calcCrow(DATAX.lat,DATAX.lang,v.lat,v.lang)<7){
-                        lost_items_of_same_type_in_proximity.push(v);
+                        if(lost_items_of_same_type_in_proximity.indexOf(v)==-1)lost_items_of_same_type_in_proximity.push(v);
                     }
                  });
                  context.simpledb.roomleveldata.lostmatches=lost_items_of_same_type_in_proximity;
                  showlostmatches(lost_items_of_same_type_in_proximity,DATAX);
              }
     }
-    
+    function containsObject(obj, list) {
+    for (var i = 0; i < list.length; i++) {
+        var counter=0;
+        for(prop in obj){
+            if(list[i][prop]==obj[prop])counter++;
+        }
+        if(counter==Object.keys(obj).length)return true;
+    }
+
+    return false;
+}
 function HttpResponseHandler(context, event) {
 //answer to second question continued
 context.sendResponse(event.getresp);
