@@ -122,7 +122,7 @@ var locationpoocho="http://ws.geonames.org/countryCodeJSON?lat="+lat+"&lng="+lan
           //
 
 
-          context.simpledb.roomleveldata.source="invalid";
+          context.simpledb.roomleveldata.source="itemtype";
           context.sendResponse(JSON.stringify(payload));   
           });
        
@@ -131,50 +131,26 @@ var locationpoocho="http://ws.geonames.org/countryCodeJSON?lat="+lat+"&lng="+lan
       else if(source=="itemtype"){
           //answer to third question
           context.simpledb.roomleveldata.itemtype=entity;
-          var usethissentence=context.simpledb.roomleveldata.isLoss===false?"Do you want a reward for returning this item? Please remember your item will only be visible to item owners \
-if the amount they are willing to pay is atleast half the amount you have demanded":"Would you offer a reward in return for your item?\
- Remember offering higher rewards increases the chances of you getting your item back";
+          var islost=context.simpledb.roomleveldata.islost;
+          var item=entity;
 
-          var C=context.simpledb.roomleveldata.countryCode;
-          var countrycurrencypair={
-            "rupee":{"countries":["IN"],"symbol":"₹"},
-            "euro":{"countries":["AL","AD","AM","AT","BY","BE","BA","BG","CH","CY","CZ","DE","DK","EE","ES","FO","FI","FR","GB","GE","GI","GR","HU","HR","IE","IS","IT","LT","LU","LV","MC","MK","MT","NO","NL","PO","PT","RO","RU","SE","SI","SK","SM","TR","UA","VA"],"symbol":"€"},
-            "pound":{"countries":["GB"],"symbol":"£"},
-            "yen":{"countries":["JP"],"symbol":"¥"},
-            "swiss franc":{"countries":["CH"],"symbol":"CHF"},
-            "canadian dollar":{"countries":["CA"],"symbol":"CAD"},
-            }
-          
-          context.simpledb.roomleveldata.currency="USD";
-          context.simpledb.roomleveldata.ratelist={"key":[3,5,8,10,50],"id card":[5,10,20,50,100],"electronic item":[10,20,50,100,200],"passport":[30,50,100,200,500],"bank card":[10,20,50,80,100]};
-          var countrymultiplier=1;
-          switch(C){
-            case("IN"): countrymultiplier=10; break;
-            case("JP"): countrymultiplier=40; break;
-            case("CA"): countrymultiplier=2;break;
-            default: countrymultiplier=1;
-        }
-
-          for(curr in countrycurrencypair){
-            if(countrycurrencypair[curr].countries.indexOf(C)!=-1){
-              //matched
-              context.simpledb.roomleveldata.currency=countrycurrencypair[curr].symbol;
-              break;
-            }
+          if(item=="key" || item=="electronic item"){
+                context.simpledb.roomleveldata.source="invalid";
+                askForReward();
           }
-var currencyArray=[];
-          for(var i=0;i<context.simpledb.roomleveldata.ratelist[entity].length;i++)currencyArray.push(context.simpledb.roomleveldata.currency+" "+context.simpledb.roomleveldata.ratelist[entity][i]*countrymultiplier);
+          else{
+                context.simpledb.roomleveldata.source="uniquename";
+                context.sendResponse("What is the name mentioned on the "+item);
+              }
+      }
+      
 
-          var payload = {
-                "type": "quick_reply",
-                "content": {
-                    "type":"text",
-                    "text":usethissentence
-                },
-                "options": currencyArray,
-                "msgid": "reward"
-               }   
-          context.sendResponse(JSON.stringify(payload));
+      else if(context.simpledb.roomleveldata.source=="uniquename"){
+
+        context.simpledb.roomleveldata.source="invalid";
+        context.simpledb.roomleveldata.uniquename=entity
+        
+         askForReward();
       }
 
       else if(source=="reward"){
@@ -188,32 +164,26 @@ var currencyArray=[];
               
           }
           else{
-              //ask the lost guy if he wants to say something more
-              context.simpledb.roomleveldata.source="anythingmore";
-              context.sendResponse("Can you describe your item?");
-          }
-      }
-      else if(context.simpledb.roomleveldata.source=="anythingmore"){
-
-          context.simpledb.roomleveldata.source="invalid";
-          context.simpledb.roomleveldata.description=entity;
-          //end of jounrey for lost guy
-          //sendmatchretrieve, if not found ask him to periodically recheck.
-              var DATA={
-                  "islost":true,
-                  "name":event.senderobj.display,
-                  "userid":event.sender,
-                  "itemtype":context.simpledb.roomleveldata.itemtype,
-                  "description":context.simpledb.roomleveldata.description,
-                  "reward":context.simpledb.roomleveldata.reward,
-                  "lat":context.simpledb.roomleveldata.lat,
-                  "lang":context.simpledb.roomleveldata.lang
-               };
-
+              //end of journey for all lost
+                    context.simpledb.roomleveldata.source="invalid";
+                    //sendmatchretrieve, if not found ask him to periodically recheck.
+                    var DATA={
+                        "islost":true,
+                        "name":event.senderobj.display,
+                        "userid":event.sender,
+                        "itemtype":context.simpledb.roomleveldata.itemtype,
+                        "reward":context.simpledb.roomleveldata.reward,
+                        "lat":context.simpledb.roomleveldata.lat,
+                        "lang":context.simpledb.roomleveldata.lang
+};
+              if(context.simpledb.roomleveldata.uniquename)
+                DATA.uniquename=context.simpledb.roomleveldata.uniquename;
                context.simpledb.roomleveldata.submitted=DATA;
                serverkobhejo(DATA);
-                //context.sendResponse("All good so far");
-      }
+              }
+        }
+      
+
       else if(event.messageobj.type=="image" && context.simpledb.roomleveldata.source=="photo"){
           context.simpledb.roomleveldata.foundimage=encodeURIComponent(event.messageobj.url);
           context.simpledb.roomleveldata.source="phone";
@@ -222,6 +192,8 @@ var currencyArray=[];
       }
      
       else if(context.simpledb.roomleveldata.source=="phone"){
+
+        // end of the journey for all found
           context.simpledb.roomleveldata.source="invalid";
           context.simpledb.roomleveldata.phone=entity;
               var DATA={
@@ -236,10 +208,15 @@ var currencyArray=[];
                   "lang":context.simpledb.roomleveldata.lang
                };
 
+               if(context.simpledb.roomleveldata.uniquename)
+                DATA.uniquename=context.simpledb.roomleveldata.uniquename;
                context.simpledb.roomleveldata.submitted=undefined; //no data saved in cache for finders, @status only for owners
                serverkobhejo(DATA);   
                //context.sendResponse("All good so far");
           }
+        
+
+
           else if(source=="confirmwarn"){
             showmatchestolost(context.simpledb.roomleveldata.eventgetresp);
           }
@@ -335,7 +312,56 @@ var currencyArray=[];
       else {
           context.sendResponse('Sorry! I could not understand you. Type start to report a lost or found issue.'); 
       }
+        function askForReward (){
 
+          var usethissentence=context.simpledb.roomleveldata.isLoss===false?"Do you want a reward for returning this item? Please remember your item will only be visible to item owners \
+if the amount they are willing to pay is atleast half the amount you have demanded":"Would you offer a reward in return for your item?\
+ Remember offering higher rewards increases the chances of you getting your item back";
+
+          var C=context.simpledb.roomleveldata.countryCode;
+          var countrycurrencypair={
+            "rupee":{"countries":["IN"],"symbol":"₹"},
+            "euro":{"countries":["AL","AD","AM","AT","BY","BE","BA","BG","CH","CY","CZ","DE","DK","EE","ES","FO","FI","FR","GB","GE","GI","GR","HU","HR","IE","IS","IT","LT","LU","LV","MC","MK","MT","NO","NL","PO","PT","RO","RU","SE","SI","SK","SM","TR","UA","VA"],"symbol":"€"},
+            "pound":{"countries":["GB"],"symbol":"£"},
+            "yen":{"countries":["JP"],"symbol":"¥"},
+            "swiss franc":{"countries":["CH"],"symbol":"CHF"},
+            "canadian dollar":{"countries":["CA"],"symbol":"CAD"},
+            };
+          
+          context.simpledb.roomleveldata.currency="USD";
+          context.simpledb.roomleveldata.ratelist={"key":[3,5,8,10,50],"id card":[5,10,20,50,100],"electronic item":[10,20,50,100,200],"passport":[30,50,100,200,500],"bank card":[10,20,50,80,100]};
+          var countrymultiplier=1;
+          switch(C){
+            case("IN"): countrymultiplier=10; break;
+            case("JP"): countrymultiplier=40; break;
+            case("CA"): countrymultiplier=2;break;
+            default: countrymultiplier=1;
+        }
+
+          for(curr in countrycurrencypair){
+            if(countrycurrencypair[curr].countries.indexOf(C)!=-1){
+              //matched
+              context.simpledb.roomleveldata.currency=countrycurrencypair[curr].symbol;
+              break;
+            }
+          }
+
+        var currencyArray=[];
+        var item=context.simpledb.roomleveldata.itemtype;
+        for(var i=0;i<context.simpledb.roomleveldata.ratelist[item].length;i++)
+            currencyArray.push(context.simpledb.roomleveldata.currency+" "+context.simpledb.roomleveldata.ratelist[item][i]*countrymultiplier);
+          var payload = {
+                "type": "quick_reply",
+                "content": {
+                    "type":"text",
+                    "text":usethissentence
+                },
+                "options": currencyArray,
+                "msgid": "reward"
+               };
+               
+          context.sendResponse(JSON.stringify(payload));
+      }
 
       
   }
@@ -383,103 +409,9 @@ var currencyArray=[];
 
           context.simpledb.roomleveldata.source="invalid";
           context.sendResponse(JSON.stringify(payload));   
-          });
-
-        
+          });        
   }
 
-
-      // function showmatches(arr,src){
-      //     context.simpledb.roomleveldata.source="invalid";
-      //     var items=[];
-      //     arr.forEach(function(v,i){
-      //         var dothis={
-      //               "title": v.itemtype+" "+i,
-      //              "subtitle": calcCrow(v.lat,v.lang,src.lat,src.lang)+" km away\n"+v.description,
-      //               "imgurl": v.foundimage,
-      //               "options":[
-      //                  {
-      //                   "type":"text",
-      //                   "title":"Select "+i
-      //                  }
-      //                ]
-      //             }; 
-      //         items.push(dothis);
-      //     });
-      //     var catalogue={
-      //         "type": "catalogue",
-      //         "msgid": "found_items_matches",
-      //         "items":items
-      //     }
-      //     context.sendResponse(JSON.stringify(catalogue));
-      // }
-      //    function showlostmatches(arr,src){
-      //     context.simpledb.roomleveldata.source="invalid";
-      //     var items=[];
-      //     arr.forEach(function(v,i){
-      //         var dothis={
-      //               "title": v.itemtype+" "+i,
-      //              "subtitle": calcCrow(v.lat,v.lang,src.lat,src.lang)+" km away\n"+v.description+"\nReward: "+v.reward,
-      //               "options":[
-      //                  {
-      //                   "type":"text",
-      //                   "title":"Select "+i
-      //                  }
-      //                ]
-      //             }; 
-      //         items.push(dothis);
-      //     });
-      //     var catalogue={
-      //         "type": "catalogue",
-      //         "msgid": "lost_items_matches",
-      //         "items":items
-      //     }
-      //     context.sendResponse(JSON.stringify(catalogue));
-      // }
-      
-  //     function containsObject(obj, list) {
-  //     for (var i = 0; i < list.length; i++) {
-  //         var counter=0;
-  //         for(prop in obj){
-  //             if(list[i][prop]==obj[prop])counter++;
-  //         }
-  //         if(counter==Object.keys(obj).length)return true;
-  //     }
-
-  //     return false;
-  // }
-
-  // function postUsers(){
-  //     var url=dbUsers+'/'
-  //     for(var i=0;i<arguments.length;i++){
-  //         url=url+arguments[i]+'+';
-  //     }
-  //     // context.sendResponse(url);
-  //     context.simplehttp.makeGet(url);
-  // }
-
-  // function getTotal(){
-  //     var url=db+'/getLength/'
-  //     for(var i=0;i<arguments.length;i++){
-  //         url=url+arguments[i]+'+';
-  //     }
-  //     context.simplehttp.makeGet(url,null,getTotalHandler );
-
-  //     function getTotalHandler(context,event){
-  //     var currObj = JSON.parse(event.getresp);
-  //     context.sendResponse(currObj);   
-  //     }
-  // }
-
-  // function isUserSubmitted(userId){
-  //     var url = dbUsers + '/' + 'search/' + userId;
-  //     context.simplehttp.makeGet(url,null,isUserSubmittedHandler);
-
-  //     function isUserSubmittedHandler(context,event){
-  //     VARisUserSubmitted = event.getresp;
-  //     context.sendResponse(VARisUserSubmitted);
-  //   }
-  // }
 
   function serverkobhejo(data){
       var url = db+ '/sendprocessretrieve/' + JSON.stringify(data);
@@ -487,7 +419,9 @@ var currencyArray=[];
       function responsefromserver(context,event){
       if(data.islost===true){
           //proceed to show matches if found else ask to recheck again
-          if(event.getresp=="null"){
+          // context.sendResponse(event.getresp)
+          // return
+          if(event.getresp=="andhera kayam"){
               context.sendResponse("No found objects matching your criteria have yet been found. Please check the status periodically for found matches by typing @status or click the 'Check Status' option from the menu on bottom left corner.");
             }
           else{
