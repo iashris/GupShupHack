@@ -1,10 +1,12 @@
 var express = require('express');
 var	app = express();
+
 const firebase= require('firebase');
 
 var najax = $ = require('najax');
 
 app.set('port', (process.env.PORT || 3000));
+app.use(express.static(__dirname+'/Views'));
 
 // Initializing firebase -----------------------
 
@@ -24,6 +26,12 @@ app.get('/', function(req, res) {
 	res.send("Welcome to Fetchfind");
 });
 
+app.get('/privacy', function(req, res) {
+	res.sendFile(__dirname+'/privacypolicy.htm');
+});
+
+//-------------------------------------------
+
 // Getting the length of any node
 app.get('/getLength/:addressForLength', function(req, res) {
 	var address = req.params.addressForLength;
@@ -38,34 +46,29 @@ app.get('/getLength/:addressForLength', function(req, res) {
 });
 
 // Adding new user to database
-app.get('/Users/:userId', function(req, res) {
-	var userid = req.params.userId.split('+')[0];
-	var userName = req.params.userId.split('+')[1];
-	db.ref('Users/'+userid).update({Name:userName});
+
+app.get('/removefinder/:details',function(req,res){
+	var details=JSON.parse(req.params.details);
+	var dbRef=db.ref(details.countryCode+'/'+details.tempData.itemtype+"/found");
+	var dbDeploy=db.ref(details.countryCode+'/'+details.tempData.itemtype+"/matches");
+	dbRef.once("value",function(snap){
+		snap.forEach(function(v){
+			if(v.val().userid==details.finderID){
+				//match made in heaven
+				var matchitem={
+					"dateMatched":new Date().getTime(),
+					"finder":v.val(),
+					"owner":details.tempData
+				}
+				dbDeploy.push(matchitem);
+				dbRef.child(v.key).remove();
+				res.send("perfecto");
+			}
+		});
+	});
 });
 
 
-app.get('/test/',function(req,res){
-	var xxx={
-                  "islost":false,
-                  "name":"Ashris",
-                  "userid":4545643,
-                  "phone":"9002311505",
-                  "itemtype":"demotype",
-                  "reward":"$ 500",
-                  "foundimage":"http://sampleimage.org",
-                  "lat":34.67,
-                  "lang":25.90
-               };
-
-db.ref('IN/passport/found').once('value',function(snap){
-	var ff=snap.val();
-				var dd= Object.keys(ff).map(function(key) {
-    return ff[key];
-});
-				res.send(dd);
-});
-});
 // Updating the Items
 app.get('/sendprocessretrieve/:Itemdata/', function(req, res) {
 	// res.send('hiii '+JSON.parse(req.params.Itemdata));
@@ -78,57 +81,97 @@ app.get('/sendprocessretrieve/:Itemdata/', function(req, res) {
 	var locationpoocho='http://ws.geonames.org/countryCodeJSON?lat='+data["lat"]+"&lng="+data["lang"]+"&username=fetchfindbot";
 	$.get(locationpoocho,function(result){
 		var countryCode=JSON.parse(result)["countryCode"];
-
-function initiatematchingwithfound(countryCode, lostdata){
-	db.ref(countryCode+'/'+lostdata["itemtype"]+'/found').once('value',function(snap){
-		console.log(snap.val());
-			var obj=snap.val();
-		var founditemsincountry = Object.keys(obj).map(function(key) {
-    return obj[key];
-});
-
-		var items=[];
-
-		for(var i=0;i<founditemsincountry.length;i++){
-			var iteratedfounditem=founditemsincountry[i];
-			var distance=calcCrow(iteratedfounditem,lostdata);
-			if(distance<5 && priceCheck(iteratedfounditem.reward,lostdata.reward)===true){
-          			//prepare this item now
-          			var prepareditem={
-          				"title":"Match "+i+1,
-          				"subtitle":distance+" km away | Reward demanded: "+iteratedfounditem.reward,
-          				"imgurl":iteratedfounditem.foundimage,
-          				"name":iteratedfounditem.name,
-          				"phone":iteratedfounditem.phone,
-          				"reward":iteratedfounditem.reward,
-          				"options":[
-          				{
-          					"type":"text",
-          					"title":iteratedfounditem.userid+'#'+i
-          				}]
-          			};
-          			items.push(prepareditem);
-          		}	
-          	}
-          //all weapons deployed
-          //ab goli maaro
-          if(items.length==0)res.send("null");
-          else res.send(items);
-      	});
-  }
+		data.dateAdded=new Date().getTime();
 		if(islost===true){
-				//LOST 	
-				//Update lost items , Match items , Send status to bot
-				db.ref(countryCode+'/'+ data["itemtype"]+'/lost').push(data);
-				initiatematchingwithfound(countryCode, data); //this function runs each time refresh is called
+			//LOST 	
+			//Update lost items , Match items , Send status to bot
+			var dbRef=db.ref(countryCode+'/'+ data["itemtype"]+'/lost');
+
+			  if (data.torf)dbRef.push(data);
+
+			
+			
+			initiatematchingwithfound(countryCode, data); //this function runs each time refresh is called
 
 			}
-			else{
+		else{
 				//FOUND
 				//Update found items , Match items , Send status to bot
 				db.ref(countryCode+'/'+ data["itemtype"]+'/found').push(data);
 				res.send("all ok");
 			}
+
+			function initiatematchingwithfound(countryCode, lostdata){
+				console.log("I am called")
+				db.ref(countryCode+'/'+lostdata["itemtype"]+'/found').once('value',function(snap){
+					console.log("The output is: ",snap.val());
+
+					var obj=snap.val();
+					if(!obj){
+						res.end("andhera kayam");
+						return;
+					}
+	else{
+					var founditemsincountry = Object.keys(obj).map(function(key) {
+
+			    			return obj[key];
+							});
+
+					var items=[];
+
+					for(var i=0;i<founditemsincountry.length;i++){
+						var iteratedfounditem=founditemsincountry[i];
+						var distance=calcCrow(iteratedfounditem,lostdata);
+
+						if(distance<5 && priceCheck(iteratedfounditem.reward,lostdata.reward)===true){
+								var item=iteratedfounditem.itemtype;
+								if(item=="bank card" || item=="id card" || item=="passport"){
+									if(lostdata.uniquename==iteratedfounditem.uniquename){
+										var prepareditem={
+					          				"title":"Exact Match ",
+					          				"subtitle":distance+" km away | Reward demanded: "+iteratedfounditem.reward,
+					          				"imgurl":iteratedfounditem.foundimage,
+					          				"name":iteratedfounditem.name,
+					          				"phone":iteratedfounditem.phone,
+					          				"reward":iteratedfounditem.reward,
+					          				"options":[
+					          				{
+					          					"type":"text",
+					          					"title":iteratedfounditem.userid+'#0'
+					          				}]
+			          					};
+										items=[prepareditem];
+										break;
+									}
+								}
+			          			//prepare this item now
+			          			var prepareditem={
+			          				"title":"Match "+i+1,
+			          				"subtitle":distance+" km away | Reward demanded: "+iteratedfounditem.reward,
+			          				"imgurl":iteratedfounditem.foundimage,
+			          				"name":iteratedfounditem.name,
+			          				"phone":iteratedfounditem.phone,
+			          				"reward":iteratedfounditem.reward,
+			          				"options":[
+			          				{
+			          					"type":"text",
+			          					"title":iteratedfounditem.userid+'#'+i
+			          				}]
+			          			};
+			          			items.push(prepareditem);
+			          		}	//if match
+			          	}//for loop
+
+			          //all weapons deployed
+			          //ab goli maaro
+			          res.send(items)
+			          return;
+
+
+			      } //else
+			      	});
+			  }
+
 
 		});	
 
