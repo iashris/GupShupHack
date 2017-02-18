@@ -1,20 +1,18 @@
-  var db='https://fetchfind.herokuapp.com';
-  var dbUsers='https://fetchfind.herokuapp.com/Users'
+  var db='http://www.sparreo.com';
+  var dbUsers='http://www.sparreo.com/Users'
   var VARisUserSubmitted;
 
   /** This is a sample code for your bot**/
   function MessageHandler(context, event) {
       
       var entity=event.message.toLowerCase();
-      
-      var isUsersEmpty=context.simpledb.botleveldata.users===undefined
       var source=event.messageobj!==undefined?event.messageobj.refmsgid:"notapplicable";
       if(entity=="@status"){
         if(context.simpledb.roomleveldata.submitted===undefined){
           context.sendResponse("You don't seem to have any previous report. Kindly type start to begin.");
         }
         else{
-            serverkobhejo(context.simpledb.roomleveldata.submitted);
+            serverkobhejo(context.simpledb.roomleveldata.submitted,false);
         }
       }
       else if(entity=="hi" || entity=="hello" || entity=="yo" || entity=="hey" || entity=="start" || entity=="hola" || entity=="hallo" || entity=="hei")  {
@@ -49,6 +47,7 @@
       else if(source=="resume001" && (entity=="yes" || entity=="no")){
           if(entity=="yes"){
               context.simpledb.roomleveldata.submitted=undefined;
+              clearlocaldata();
               var button = {
                 "type": "survey",
                 "question": "What do you want to report?",
@@ -63,7 +62,8 @@
           context.sendResponse("You don't seem to have any previous report. Kindly type start to begin.");
         }
         else{
-            serverkobhejo(context.simpledb.roomleveldata.submitted);
+
+            serverkobhejo(context.simpledb.roomleveldata.submitted,false);
         }
           }
       }
@@ -90,7 +90,7 @@
 
       else if(entity=="enter manually" && source=="askforloc"){
         context.simpledb.roomleveldata.source="entermanually";
-        context.sendResponse("Sorry for the incovenience. Please visit https://www.google.co.in/maps and copy the latitude and longitude of the location. Enter the values here separated by a comma. Example: 89.475090,78.47484");
+        context.sendResponse("Enter the latitude and longitude of the location separated by a comma. Example: 89.475090,78.47484");
 
       }
       else if(context.simpledb.roomleveldata.source=="entermanually"){
@@ -106,7 +106,7 @@ var locationpoocho="http://ws.geonames.org/countryCodeJSON?lat="+lat+"&lng="+lan
                 "type": "quick_reply",
                 "content": {
                     "type":"text",
-                    "text":"Perfect. Now, can you tell me what kind of item it is? Found country: "+context.simpledb.roomleveldata.countryCode
+                    "text":"Perfect. Now, can you tell me what kind of item it is?"
                 },
                 "msgid": "itemtype",
                "options": [
@@ -179,7 +179,7 @@ var locationpoocho="http://ws.geonames.org/countryCodeJSON?lat="+lat+"&lng="+lan
               if(context.simpledb.roomleveldata.uniquename)
                 DATA.uniquename=context.simpledb.roomleveldata.uniquename;
                context.simpledb.roomleveldata.submitted=DATA;
-               serverkobhejo(DATA);
+               serverkobhejo(DATA,true);
               }
         }
       
@@ -211,7 +211,8 @@ var locationpoocho="http://ws.geonames.org/countryCodeJSON?lat="+lat+"&lng="+lan
                if(context.simpledb.roomleveldata.uniquename)
                 DATA.uniquename=context.simpledb.roomleveldata.uniquename;
                context.simpledb.roomleveldata.submitted=undefined; //no data saved in cache for finders, @status only for owners
-               serverkobhejo(DATA);   
+               clearlocaldata();
+               serverkobhejo(DATA,true);   
                //context.sendResponse("All good so far");
           }
         
@@ -227,9 +228,11 @@ var locationpoocho="http://ws.geonames.org/countryCodeJSON?lat="+lat+"&lng="+lan
           if(context.simpledb.roomleveldata.hasClaimedOnce===false){
             //process karo
             context.simpledb.roomleveldata.hasClaimedOnce=true;
+            removeFinder(finderMatchedUserID,context.simpledb.roomleveldata.submitted);
+            context.simpledb.roomleveldata.submitted=undefined;
+            clearlocaldata();
             //since this is now claimed, remove the found id from database
-            //removeFinder(finderMatchedUserID,context.simpledb.roomleveldata.submitted);
-            //context.simpledb.roomleveldata.submitted=undefined;
+            
             context.sendResponse("Your item is with "+fetchFound.name+" and they can be reached at "+fetchFound.phone+"\nPlease ensure you pay them the reward of "+fetchFound.reward+" when they hand you the item back.");
           }
           else{
@@ -238,31 +241,6 @@ var locationpoocho="http://ws.geonames.org/countryCodeJSON?lat="+lat+"&lng="+lan
 
   }
      
-
-      else if(source=="lastconfirmation" && entity=="yes"){
-          if(DATA.islost===true){
-              context.simpledb.roomleveldata.lostmatches=undefined;
-              var index=context.simpledb.botleveldata.lostitems.indexOf(DATA);
-              context.simpledb.botleveldata.lostitems.splice(index,1);
-              
-              var index2=context.simpledb.botleveldata.founditems.indexOf(retrieveitem);
-              context.simpledb.botleveldata.founditems.splice(index2,1);
-              context.simpledb.roomleveldata.submitted=undefined;
-              context.sendResponse("We are glad we could be of help :) Please reward the finder with the amount you promised. If you found the application useful, you can support us by making a donation at https://www.paypal.me/iashris You are free to make donate any amount as you please. Hope you had a nice experience!");
-          }
-          else if(DATA.islost===false){
-              context.simpledb.roomleveldata.foundmatches=undefined;
-              var index=context.simpledb.botleveldata.founditems.indexOf(DATA);
-              context.simpledb.botleveldata.founditems.splice(index,1);
-              
-              var index2=context.simpledb.botleveldata.lostitems.indexOf(retrieveitem);
-              context.simpledb.botleveldata.lostitems.splice(index2,1);
-              context.simpledb.roomleveldata.submitted=undefined;
-              context.sendResponse("Thanks for your help. Do not hesitate to ask for a reward from the person you returned the item to.");
-          }
-          
-          
-      }
 
       else if(source=="lastconfirmation" && entity=="no"){
           context.sendResponse("Alright then, we shall keep the entry in the database until the problem is solved. Type start to search for a match later.");
@@ -308,10 +286,41 @@ var locationpoocho="http://ws.geonames.org/countryCodeJSON?lat="+lat+"&lng="+lan
        else if(entity=="sudo get all users"){
           context.simplehttp.makeGet('https://fetchfind-12fc9.firebaseio.com/Users.json');
       }
+      else if(entity=="facebook echo"){
+          context.sendResponse("I hear you loud and clear!");
+      }
       
       else {
           context.sendResponse('Sorry! I could not understand you. Type start to report a lost or found issue.'); 
       }
+
+
+
+function clearlocaldata(){
+  context.simpledb.roomleveldata.userid=undefined
+  context.simpledb.roomleveldata.submitted=undefined
+  context.simpledb.roomleveldata.uniquename=undefined
+  context.simpledb.roomleveldata.islost=undefined
+  context.simpledb.roomleveldata.itemtype=undefined
+  context.simpledb.roomleveldata.source=undefined
+}
+
+
+
+      function removeFinder(finderID,tempData){
+        var shoot={
+          "finderID":finderID,
+          "tempData":tempData,
+          "countryCode":context.simpledb.roomleveldata.countryCode
+        }
+        var url = db+ '/removefinder/' + JSON.stringify(shoot);
+      context.simplehttp.makeGet(url,null,deleteduserresponse);
+      function deleteduserresponse(context,event){
+        if(event.getresp!="perfecto")context.sendResponse("Error. Recheck karo.")
+      } 
+
+  }
+
         function askForReward (){
 
           var usethissentence=context.simpledb.roomleveldata.isLoss===false?"Do you want a reward for returning this item? Please remember your item will only be visible to item owners \
@@ -391,7 +400,7 @@ if the amount they are willing to pay is atleast half the amount you have demand
                 "type": "quick_reply",
                 "content": {
                     "type":"text",
-                    "text":"Perfect. Now, can you tell me what kind of item it is? Found country: "+context.simpledb.roomleveldata.countryCode
+                    "text":"Perfect. Now, can you tell me what kind of item it is?"
                 },
                 "msgid": "itemtype",
                "options": [
@@ -413,7 +422,8 @@ if the amount they are willing to pay is atleast half the amount you have demand
   }
 
 
-  function serverkobhejo(data){
+  function serverkobhejo(data,torf){
+    data.torf=torf;
       var url = db+ '/sendprocessretrieve/' + JSON.stringify(data);
       context.simplehttp.makeGet(url,null,responsefromserver);
       function responsefromserver(context,event){
